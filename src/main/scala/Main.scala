@@ -3,6 +3,8 @@ import org.http4s.HttpRoutes
 import org.http4s.MediaType
 import org.http4s.dsl.io._
 import org.http4s.headers.`Content-Type`
+import org.http4s.headers.`Cache-Control`
+import org.http4s.CacheDirective._
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.staticcontent._
@@ -30,10 +32,17 @@ object Main extends IOApp.Simple {
   // Configure the static file service
   val staticRoutes = fileService[IO](FileService.Config("./src/main/resources/static"))
 
-  // Combine routes
+  // Middleware to disable caching
+  val noCacheMiddleware: HttpRoutes[IO] => HttpRoutes[IO] = { routes =>
+    routes.map { response =>
+      response.putHeaders(`Cache-Control`(`no-store`))
+    }
+  }
+
+  // Combine routes with middleware
   val httpApp = Router(
     "/" -> httpRoutes,
-    "/static" -> staticRoutes
+    "/static" -> noCacheMiddleware(staticRoutes)
   ).orNotFound
 
   override def run: IO[Unit] = {
