@@ -5,26 +5,42 @@ import scalatags.Text.tags2.title
 
 object IndexView {
   def render(): String = {
-    "<!DOCTYPE html>" + 
+    "<!DOCTYPE html>" +
     html(
       head(
+        meta(charset := "UTF-8"),
         title("Enter Latitude and Longitude"),
-        link(rel := "stylesheet", href := "https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.css"),
-        script(src := "https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"),
-        script(src := "/static/map.js")
+        link(rel := "stylesheet", href := "/static/css/bootstrap.min.css"),
+        link(rel := "stylesheet", href := "/static/css/openlayers.css"),
+        link(rel := "stylesheet", href := "/static/css/main.css"),
       ),
       body(
-        h1("Enter Latitude and Longitude"),
-        form(action := "/weather", method := "get")(
-          label(`for` := "lat")("Latitude:"),
-          input(`type` := "text", id := "lat", name := "lat"),
-          br(), br(),
-          label(`for` := "long")("Longitude:"),
-          input(`type` := "text", id := "long", name := "long"),
-          br(), br(),
-          input(`type` := "submit", value := "Submit")
+        div(cls := "container")(
+          div(cls := "row")(
+            div(cls := "col-md-6")(
+              h1("Enter Latitude and Longitude"),
+              form(action := "/weather", method := "get")(
+                div(cls := "mb-3")(
+                  label(`for` := "lat", cls := "form-label")("Latitude:"),
+                  input(`type` := "text", cls := "form-control", id := "lat", name := "lat")
+                ),
+                div(cls := "mb-3")(
+                  label(`for` := "long", cls := "form-label")("Longitude:"),
+                  input(`type` := "text", cls := "form-control", id := "long", name := "long")
+                ),
+                div(cls := "mb-3")(
+                  input(`type` := "submit", cls := "btn btn-primary", value := "Submit")
+                )
+              )
+            ),
+            div(cls := "col-md-6")(
+              div(id := "map", style := "width: 100%; height: 400px;")
+            )
+          )
         ),
-        div(id := "map", width := "100%", height := "400px")
+        script(src := "/static/js/bootstrap.min.js"),
+        script(src := "/static/js/openlayers.min.js"),
+        script(src := "/static/js/map.js")
       )
     ).render
   }

@@ -14,33 +14,31 @@ import services.WeatherService
 import views.IndexView
 
 object Main extends IOApp.Simple {
-
   val httpRoutes = HttpRoutes.of[IO] {
     case GET -> Root =>
-      Ok(IndexView.render()).map(_.withContentType(`Content-Type`(MediaType.text.html)))
-
-    case GET -> Root / "weather" :? LatQueryParamMatcher(lat) +& LongQueryParamMatcher(long) =>
+      Ok(IndexView.render()).map(_.withContentType(`Content-Type`(MediaType.text.html).withCharset(org.http4s.Charset.`UTF-8`)))
+    case GET -> Root / "weather" :? LatQueryParamDecoderMatcher(lat) +& LongQueryParamDecoderMatcher(long) =>
       for {
         weather <- WeatherService.fetchWeather(lat, long)
         response <- Ok(weather)
       } yield response
   }
 
-  object LatQueryParamMatcher extends QueryParamDecoderMatcher[String]("lat")
-  object LongQueryParamMatcher extends QueryParamDecoderMatcher[String]("long")
+  object LatQueryParamDecoderMatcher extends QueryParamDecoderMatcher[String]("lat")
+  object LongQueryParamDecoderMatcher extends QueryParamDecoderMatcher[String]("long")
 
   // Configure the static file service
-  val staticRoutes = fileService[IO](FileService.Config("./src/resources/static"))
+  val staticRoutes = fileService[IO](FileService.Config("./src/main/resources/static"))
 
-  // Combine the routes
+  // Combine routes
   val httpApp = Router(
     "/" -> httpRoutes,
     "/static" -> staticRoutes
   ).orNotFound
 
-  def run: IO[Unit] = {
+  override def run: IO[Unit] = {
     BlazeServerBuilder[IO]
-      .bindHttp(8080, "0.0.0.0")
+      .bindHttp(8080, "localhost")
       .withHttpApp(httpApp)
       .serve
       .compile
