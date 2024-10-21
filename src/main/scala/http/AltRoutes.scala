@@ -12,8 +12,10 @@ import org.http4s.server.Router
 import org.http4s.client.dsl.io._
 import org.http4s.client.Client
 import services.{GeocodingService, WeatherService}
-import views.AltIndexView
+import views.{AltIndexView, WeatherView}
 import org.slf4j.LoggerFactory
+import io.circe.Json
+import io.circe.parser._
 
 object AltRoutes {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -28,8 +30,8 @@ object AltRoutes {
       logger.info(s"Received request for weather with city: $city")
       for {
         coords <- GeocodingService.geocode(city, "")
-        weather <- WeatherService.fetchWeather(coords._1, coords._2)
-        response <- Ok(AltIndexView.render(Some(weather)))
+        weatherJson <- WeatherService.fetchWeather(coords._1, coords._2)
+        response <- Ok(AltIndexView.render(Some(weatherJson), Some(city))).map(_.withContentType(`Content-Type`(MediaType.text.html).withCharset(org.http4s.Charset.`UTF-8`)))
       } yield response
     case GET -> Root / "autocomplete" :? QueryParamDecoderMatcher(query) =>
       logger.info(s"Received autocomplete request with query: $query")
