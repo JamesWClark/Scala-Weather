@@ -1,18 +1,21 @@
 import cats.effect.{IO, IOApp}
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
-import http.Routes.allRoutes
+import org.http4s.blaze.client.BlazeClientBuilder
+import http.AltRoutes
+import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp.Simple {
-  val httpApp = allRoutes.orNotFound
-
   override def run: IO[Unit] = {
-    BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
-      .withHttpApp(httpApp)
-      .serve
-      .compile
-      .drain
-      .map(_ => println("Server started."))
+    BlazeClientBuilder[IO](global).resource.use { client =>
+      val httpApp = AltRoutes.allRoutes(client).orNotFound
+
+      BlazeServerBuilder[IO]
+        .bindHttp(8080, "localhost")
+        .withHttpApp(httpApp)
+        .serve
+        .compile
+        .drain
+    }
   }
 }

@@ -10,13 +10,13 @@ import org.http4s.Uri
 import org.http4s.circe._
 import scala.concurrent.ExecutionContext.global
 
-// example: https://api.opencagedata.com/geocode/v1/json?q=New%20York,NY&key=53771be1069a4f5c9d775211de433846
 
 object GeocodingService {
   private val apiKey = "53771be1069a4f5c9d775211de433846"
-  private val geocodingUrlTemplate = "https://api.opencagedata.com/geocode/v1/json?q=%s,%s&key=%s"
-
+  
   def geocode(city: String, state: String): IO[(String, String)] = {
+    val geocodingUrlTemplate = "https://api.opencagedata.com/geocode/v1/json?q=%s,%s&key=%s"
+    // example: https://api.opencagedata.com/geocode/v1/json?q=New%20York,NY&key=53771be1069a4f5c9d775211de433846
     BlazeClientBuilder[IO](global).resource.use { client =>
       val encodedCity = Uri.encode(city)
       val encodedState = Uri.encode(state)
