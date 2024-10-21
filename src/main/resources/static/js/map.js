@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function () {
       map.addLayer(userLayer);
 
       // Perform reverse geocoding immediately
-      reverseGeocode(position.coords.latitude, position.coords.longitude, function (cityState) {
-        console.log("Reverse geocoding result:", cityState, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the result
+      reverseGeocode(position.coords.latitude, position.coords.longitude, function (city, state) {
+        console.log("Reverse geocoding result:", city, state, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the result
         // Animate the map to the user's location
         map.getView().animate({
           center: userLocation,
@@ -58,10 +58,12 @@ document.addEventListener('DOMContentLoaded', function () {
         map.once('moveend', function () {
           // Update the input fields with the city, state, latitude, and longitude
           var cityInput = document.getElementById('city');
+          var stateInput = document.getElementById('state');
           var latInput = document.getElementById('lat');
           var longInput = document.getElementById('long');
-          console.log("Updating input fields with:", cityState, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the update
-          cityInput.value = cityState;
+          console.log("Updating input fields with:", city, state, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the update
+          cityInput.value = city;
+          stateInput.value = state;
           latInput.value = position.coords.latitude.toFixed(6);
           longInput.value = position.coords.longitude.toFixed(6);
         });
@@ -79,9 +81,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var lat = coordinate[1];
     document.getElementById('lat').value = lat.toFixed(6);
     document.getElementById('long').value = lon.toFixed(6);
-    reverseGeocode(lat, lon, function (cityState) {
+    reverseGeocode(lat, lon, function (city, state) {
+      console.log('Reverse geocoding result:', 'city: ', city, 'state: ', state, 'Lat:', lat, 'Lng:', lon); // Log the result
       var cityInput = document.getElementById('city');
-      cityInput.value = cityState;
+      var stateInput = document.getElementById('state');
+      cityInput.value = city;
+      stateInput.value = state;
     });
   });
 
@@ -94,9 +99,8 @@ document.addEventListener('DOMContentLoaded', function () {
           var components = data.results[0].components;
           var city = components.city || components.town || components.village;
           var state = components.state;
-          var cityState = city && state ? `${city}, ${state}` : city || state || data.results[0].formatted;
-          console.log("Fetched city and state:", cityState, "Lat:", lat, "Lng:", lng); // Log the fetched data
-          callback(cityState);
+          console.log("Fetched city and state:", city, state, "Lat:", lat, "Lng:", lng); // Log the fetched data
+          callback(city, state);
         }
       })
       .catch(error => console.error('Error fetching reverse geocode results:', error));

@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         var lat = result.geometry.lat;
                         var lng = result.geometry.lng;
                         centerMapOnLocation(lat, lng);
+                        updateCityAndState(result.components);
                     });
                     suggestionsContainer.appendChild(suggestion);
                 });
@@ -74,12 +75,19 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 if (data.results.length > 0) {
                     var components = data.results[0].components;
-                    var city = components.city || components.town || components.village;
-                    var state = components.state;
-                    input.value = city && state ? `${city}, ${state}` : city || state || data.results[0].formatted;
+                    updateCityAndState(components);
                 }
             })
             .catch(error => console.error('Error fetching reverse geocode results:', error));
+    }
+
+    function updateCityAndState(components) {
+        var city = components.city || components.town || components.village;
+        var state = components.state;
+        var cityInput = document.getElementById('city');
+        var stateInput = document.getElementById('state');
+        cityInput.value = city;
+        stateInput.value = state;
     }
 
     map.on('click', function (evt) {
