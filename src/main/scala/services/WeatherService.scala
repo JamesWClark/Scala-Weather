@@ -31,17 +31,23 @@ object WeatherService {
 
   private def fetchMetadata(lat: String, long: String): IO[String] = IO {
     val url = urlTemplate.format(lat, long)
-    Source.fromURL(new URL(url)).mkString
+    val metadata = Source.fromURL(new URL(url)).mkString
+    logger.info(s"Fetched metadata: $metadata")
+    metadata
   }
 
   private def extractForecastUrl(metadata: String): IO[String] = IO {
     val json: Json = parse(metadata).getOrElse(Json.Null)
     val cursor: HCursor = json.hcursor
-    cursor.downField("properties").get[String]("forecast").getOrElse("")
+    val forecastUrl = cursor.downField("properties").get[String]("forecast").getOrElse("")
+    logger.info(s"Extracted forecast URL: $forecastUrl")
+    forecastUrl
   }
 
   private def fetchForecast(forecastUrl: String): IO[String] = IO {
-    Source.fromURL(new URL(forecastUrl)).mkString
+    val forecast = Source.fromURL(new URL(forecastUrl)).mkString
+    logger.info(s"Fetched forecast: $forecast")
+    forecast
   }
 
   private def extractTodayForecast(forecast: String): IO[(String, Int, String)] = IO {

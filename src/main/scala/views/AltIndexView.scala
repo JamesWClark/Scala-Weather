@@ -13,8 +13,12 @@ object AltIndexView {
         temperature <- json.hcursor.downField("temperature").as[Int].toOption
         characterization <- json.hcursor.downField("characterization").as[String].toOption
         icon <- json.hcursor.downField("icon").as[String].toOption
-      } yield (shortForecast, temperature, characterization, icon)
+      } yield {
+        (shortForecast, temperature, characterization, icon)
+      }
     }
+
+    val cityDisplay = city.map(_.replaceAll(", United States", "")).getOrElse("")
 
     "<!DOCTYPE html>" +
     html(
@@ -46,11 +50,15 @@ object AltIndexView {
                 weatherInfo.map { case (shortForecast, temperature, characterization, icon) =>
                   div(cls := "card")(
                     div(cls := "card-body")(
-                      h5(cls := "card-title")("Weather Information"),
-                      p(cls := "card-text")(s"Short Forecast: $shortForecast"),
-                      p(cls := "card-text")(s"Temperature: $temperature°F"),
-                      p(cls := "card-text")(s"Characterization: $characterization"),
-                      if (icon.nonEmpty) img(src := icon, cls := "weather-icon") else ""
+                      h5(cls := "card-title")(cityDisplay),
+                      div(cls := "d-flex align-items-center")(
+                        if (icon.nonEmpty) img(src := icon, cls := "weather-icon mr-3") else "",
+                        div(cls := "flex-grow-1")(
+                          p(cls := "display-4")(s"$temperature°F"),
+                          p(cls := "lead")(shortForecast),
+                          p(cls := "text-muted")(s"The outside air feels $characterization today.")
+                        )
+                      )
                     )
                   )
                 }.getOrElse("")
