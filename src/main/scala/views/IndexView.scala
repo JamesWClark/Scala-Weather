@@ -9,7 +9,7 @@ object IndexView {
     html(
       head(
         meta(charset := "UTF-8"),
-        title("Enter Latitude and Longitude"),
+        title("Weather"),
         link(rel := "stylesheet", href := "/static/css/bootstrap.min.css"),
         link(rel := "stylesheet", href := "/static/css/openlayers.css"),
         link(rel := "stylesheet", href := "/static/css/main.css"),
@@ -20,6 +20,10 @@ object IndexView {
             div(cls := "col-md-6")(
               h1("Enter Latitude and Longitude"),
               form(action := "/weather", method := "get")(
+                div(cls := "mb-3")(
+                  label(`for` := "city", cls := "form-label")("City:"),
+                  input(`type` := "text", cls := "form-control", id := "city", name := "city")
+                ),
                 div(cls := "mb-3")(
                   label(`for` := "lat", cls := "form-label")("Latitude:"),
                   input(`type` := "text", cls := "form-control", id := "lat", name := "lat")
@@ -40,7 +44,8 @@ object IndexView {
         ),
         script(src := "/static/js/bootstrap.min.js"),
         script(src := "/static/js/openlayers.min.js"),
-        script(src := "/static/js/map.js")
+        script(src := "/static/js/map.js"),
+        script(src := "/static/js/opencage-autocomplete.js")
       )
     ).render
   }

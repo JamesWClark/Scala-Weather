@@ -44,9 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
       // Add the user layer to the map
       map.addLayer(userLayer);
 
-      // Center the map on the user's location
-      map.getView().setCenter(userLocation);
-      map.getView().setZoom(12); // Adjust the zoom level as needed
+      // Animate the map to the user's location
+      map.getView().animate({
+        center: userLocation,
+        zoom: 12, // Adjust the zoom level as needed
+        duration: 2000 // Duration in milliseconds
+      });
     }, function (error) {
       console.error('Error getting user location:', error);
     });
@@ -61,4 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('lat').value = lat.toFixed(6);
     document.getElementById('long').value = lon.toFixed(6);
   });
+
+  // Expose the map object to the global scope for use in autocomplete.js
+  window.map = map;
 });

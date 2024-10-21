@@ -7,6 +7,7 @@ import scala.io.Source
 import java.net.URL
 
 object WeatherService {
+  private val openCageKey = "53771be1069a4f5c9d775211de433846"
   private val urlTemplate = "https://api.weather.gov/points/%s,%s"
 
   def fetchWeather(lat: String, long: String): IO[String] = {
