@@ -24,20 +24,19 @@ object Routes {
 
   val httpRoutes: HttpRoutes[IO] = HttpRoutes.of[IO] {
     case GET -> Root =>
-      logger.debug("Received request for root")
       Ok(IndexView.render()).map(_.withContentType(`Content-Type`(MediaType.text.html).withCharset(org.http4s.Charset.`UTF-8`)))
     case GET -> Root / "weather" :? LatQueryParamDecoderMatcher(lat) +& LongQueryParamDecoderMatcher(long) =>
       logger.info(s"Received request for weather with lat: $lat, long: $long")
       for {
         weather <- WeatherService.fetchWeather(lat, long)
-        response <- Ok(WeatherView.render(weather))
+        response <- Ok(IndexView.render(Some(weather)))
       } yield response
     case GET -> Root / "weather" :? CityQueryParamDecoderMatcher(city) +& StateQueryParamDecoderMatcher(state) =>
       logger.info(s"Received request for weather with city: $city, state: $state")
       for {
         coords <- GeocodingService.geocode(city, state)
         weather <- WeatherService.fetchWeather(coords._1, coords._2)
-        response <- Ok(WeatherView.render(weather))
+        response <- Ok(IndexView.render(Some(weather)))
       } yield response
   }
 
