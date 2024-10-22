@@ -20,13 +20,30 @@ object WeatherService {
       forecastUrl <- extractForecastUrl(metadata)
       forecast <- fetchForecast(forecastUrl)
       todayForecast <- extractTodayForecast(forecast)
-      temperatureCharacterization = characterizeTemperature(todayForecast._2)
+      stationId <- extractStationId(metadata)
+      currentObservation <- fetchCurrentObservation(stationId)
+      currentTemperature = extractCurrentTemperature(currentObservation)
+      temperatureCharacterization = characterizeTemperature(currentTemperature)
     } yield Json.obj(
       "shortForecast" -> Json.fromString(todayForecast._1),
       "temperature" -> Json.fromInt(todayForecast._2),
+      "dayTemperature" -> Json.fromInt(todayForecast._3),
+      "nightTemperature" -> Json.fromInt(todayForecast._4),
+      "currentTemperature" -> Json.fromInt(currentTemperature),
       "characterization" -> Json.fromString(temperatureCharacterization),
-      "icon" -> Json.fromString(todayForecast._3)
+      "icon" -> Json.fromString(todayForecast._5)
     )
+  }.handleErrorWith { error =>
+    logger.error(s"Failed to fetch weather data: ${error.getMessage}")
+    IO.pure(Json.obj(
+      "shortForecast" -> Json.fromString("Unknown"),
+      "temperature" -> Json.fromInt(0),
+      "dayTemperature" -> Json.fromInt(0),
+      "nightTemperature" -> Json.fromInt(0),
+      "currentTemperature" -> Json.fromInt(0),
+      "characterization" -> Json.fromString("unknown"),
+      "icon" -> Json.fromString("")
+    ))
   }
 
   private def fetchMetadata(lat: String, long: String): IO[String] = IO {
@@ -50,7 +67,7 @@ object WeatherService {
     forecast
   }
 
-  private def extractTodayForecast(forecast: String): IO[(String, Int, String)] = IO {
+  private def extractTodayForecast(forecast: String): IO[(String, Int, Int, Int, String)] = IO {
     val json: Json = parse(forecast).getOrElse(Json.Null)
     val cursor: HCursor = json.hcursor
     val periods = cursor.downField("properties").downField("periods").as[List[Json]].getOrElse(List.empty)
@@ -68,7 +85,66 @@ object WeatherService {
     val shortForecast = todayPeriod.hcursor.downField("shortForecast").as[String].getOrElse("Unknown")
     val temperature = todayPeriod.hcursor.downField("temperature").as[Int].getOrElse(0)
     val icon = todayPeriod.hcursor.downField("icon").as[String].getOrElse("")
-    (shortForecast, temperature, icon)
+
+    val dayTemperature = periods.find(_.hcursor.downField("isDaytime").as[Boolean].getOrElse(false)).flatMap(_.hcursor.downField("temperature").as[Int].toOption).getOrElse(0)
+    val nightTemperature = periods.find(!_.hcursor.downField("isDaytime").as[Boolean].getOrElse(true)).flatMap(_.hcursor.downField("temperature").as[Int].toOption).getOrElse(0)
+
+    (shortForecast, temperature, dayTemperature, nightTemperature, icon)
+  }
+
+  private def extractStationId(metadata: String): IO[String] = {
+    val json: Json = parse(metadata).getOrElse(Json.Null)
+    val cursor: HCursor = json.hcursor
+    val observationStationsUrl = cursor.downField("properties").get[String]("observationStations").getOrElse("")
+    logger.info(s"Extracted observation stations URL: $observationStationsUrl")
+
+    if (observationStationsUrl.isEmpty) {
+      IO.raiseError(new Exception("Observation stations URL is empty"))
+    } else {
+      IO {
+        val stationsJson = Source.fromURL(new URL(observationStationsUrl)).mkString
+        val stationsCursor = parse(stationsJson).getOrElse(Json.Null).hcursor
+        val stationIds = stationsCursor.downField("features").as[List[Json]].getOrElse(List.empty).flatMap { feature =>
+          feature.hcursor.downField("properties").get[String]("stationIdentifier").toOption
+        }
+        val stationId = stationIds.headOption.getOrElse("")
+        logger.info(s"Extracted station ID: $stationId")
+        stationId
+      }
+    }
+  }
+
+  private def fetchCurrentObservation(stationId: String): IO[String] = {
+    if (stationId.isEmpty) {
+      IO.raiseError(new Exception("Station ID is empty"))
+    } else {
+      IO {
+        val url = s"https://api.weather.gov/stations/$stationId/observations/latest"
+        val observation = Source.fromURL(new URL(url)).mkString
+        logger.info(s"Fetched current observation: $observation")
+        observation
+      }
+    }
+  }.handleErrorWith { error =>
+    logger.error(s"Failed to fetch current observation: ${error.getMessage}")
+    IO.pure("")
+  }
+
+  private def extractCurrentTemperature(observation: String): Int = {
+    if (observation.isEmpty) {
+      logger.warn("Observation data is empty")
+      0
+    } else {
+      val json: Json = parse(observation).getOrElse(Json.Null)
+      val cursor: HCursor = json.hcursor
+      val temperatureCelsius = cursor.downField("properties").downField("temperature").downField("value").as[Double].getOrElse {
+        logger.warn("Failed to extract temperature from observation data")
+        0.0
+      }
+      val temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32
+      logger.info(s"Extracted current temperature: $temperatureCelsius°C / $temperatureFahrenheit°F")
+      temperatureFahrenheit.toInt
+    }
   }
 
   private def characterizeTemperature(temperature: Int): String = {
