@@ -15,7 +15,7 @@ This is a Scala-based weather application.
     
     ```sh
     git clone https://github.com/JamesWClark/Scala-Weather
-    cd weather-app
+    cd Scala-Weather
 
 2. **Build the Docker image:**  
     
@@ -37,7 +37,7 @@ This is a Scala-based weather application.
     
     ```sh
     git clone https://github.com/JamesWClark/Scala-Weather
-    cd weather-app
+    cd Scala-Weather
 
 2. **Install dependencies and run the application:**  
     
