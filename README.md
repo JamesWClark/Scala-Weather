@@ -12,7 +12,7 @@ This is a Scala-based weather application.
 ### Using Docker
 
 1. **Clone the repository:**  
-    git clone https://github.com/yourusername/weather-app.git
+    git clone https://github.com/JamesWClark/Scala-Weather
     cd weather-app
 
 2. **Build the Docker image:**  
@@ -27,7 +27,7 @@ This is a Scala-based weather application.
 ### Running Locally
 
 1. **Clone the repository:**  
-    git clone https://github.com/yourusername/weather-app.git
+    git clone https://github.com/JamesWClark/Scala-Weather
     cd weather-app
 
 2. **Install dependencies and run the application:**  
