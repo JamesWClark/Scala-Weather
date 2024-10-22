@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Perform reverse geocoding immediately
       reverseGeocode(position.coords.latitude, position.coords.longitude, function (city, state) {
-        console.log("Reverse geocoding result:", city, state, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the result
         // Animate the map to the user's location
         map.getView().animate({
           center: userLocation,
@@ -61,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
           var stateInput = document.getElementById('map-state');
           var latInput = document.getElementById('map-latitude');
           var longInput = document.getElementById('map-longitude');
-          console.log("Updating input fields with:", city, state, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the update
           cityInput.value = city;
           stateInput.value = state;
           latInput.value = position.coords.latitude.toFixed(6);

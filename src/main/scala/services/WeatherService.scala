@@ -17,15 +17,36 @@ object WeatherService {
 
   def fetchWeather(lat: String, long: String): IO[(Json, String)] = {
     for {
-      metadata <- fetchMetadata(lat, long)
-      forecastUrl <- extractForecastUrl(metadata)
-      forecast <- fetchForecast(forecastUrl)
-      todayForecast <- extractTodayForecast(forecast)
-      stationId <- extractStationId(metadata)
-      currentObservation <- fetchCurrentObservation(stationId)
+      metadata <- fetchMetadata(lat, long).handleErrorWith { error =>
+        logger.error(s"Failed to fetch metadata: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to fetch metadata"))
+      }
+      forecastUrl <- extractForecastUrl(metadata).handleErrorWith { error =>
+        logger.error(s"Failed to extract forecast URL: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to extract forecast URL"))
+      }
+      forecast <- fetchForecast(forecastUrl).handleErrorWith { error =>
+        logger.error(s"Failed to fetch forecast: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to fetch forecast"))
+      }
+      todayForecast <- extractTodayForecast(forecast).handleErrorWith { error =>
+        logger.error(s"Failed to extract today's forecast: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to extract today's forecast"))
+      }
+      stationId <- extractStationId(metadata).handleErrorWith { error =>
+        logger.error(s"Failed to extract station ID: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to extract station ID"))
+      }
+      currentObservation <- fetchCurrentObservation(stationId).handleErrorWith { error =>
+        logger.error(s"Failed to fetch current observation: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to fetch current observation"))
+      }
       currentTemperature = extractCurrentTemperature(currentObservation)
       temperatureCharacterization = characterizeTemperature(currentTemperature)
-      locationTuple <- GeocodingService.reverseGeocode(lat, long)
+      locationTuple <- GeocodingService.reverseGeocode(lat, long).handleErrorWith { error =>
+        logger.error(s"Failed to reverse geocode: ${error.getMessage}")
+        IO.raiseError(new Exception("Failed to reverse geocode"))
+      }
       location = s"${locationTuple._1}, ${locationTuple._2}"
     } yield (
       Json.obj(
