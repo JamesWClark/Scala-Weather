@@ -9,12 +9,13 @@ import java.net.URL
 import java.time.{LocalDate, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import org.slf4j.LoggerFactory
+import services.GeocodingService
 
 object WeatherService {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val urlTemplate = "https://api.weather.gov/points/%s,%s"
 
-  def fetchWeather(lat: String, long: String): IO[Json] = {
+  def fetchWeather(lat: String, long: String): IO[(Json, String)] = {
     for {
       metadata <- fetchMetadata(lat, long)
       forecastUrl <- extractForecastUrl(metadata)
@@ -24,26 +25,20 @@ object WeatherService {
       currentObservation <- fetchCurrentObservation(stationId)
       currentTemperature = extractCurrentTemperature(currentObservation)
       temperatureCharacterization = characterizeTemperature(currentTemperature)
-    } yield Json.obj(
-      "shortForecast" -> Json.fromString(todayForecast._1),
-      "temperature" -> Json.fromInt(todayForecast._2),
-      "dayTemperature" -> Json.fromInt(todayForecast._3),
-      "nightTemperature" -> Json.fromInt(todayForecast._4),
-      "currentTemperature" -> Json.fromInt(currentTemperature),
-      "characterization" -> Json.fromString(temperatureCharacterization),
-      "icon" -> Json.fromString(todayForecast._5)
+      locationTuple <- GeocodingService.reverseGeocode(lat, long)
+      location = s"${locationTuple._1}, ${locationTuple._2}"
+    } yield (
+      Json.obj(
+        "shortForecast" -> Json.fromString(todayForecast._1),
+        "temperature" -> Json.fromInt(todayForecast._2),
+        "dayTemperature" -> Json.fromInt(todayForecast._3),
+        "nightTemperature" -> Json.fromInt(todayForecast._4),
+        "currentTemperature" -> Json.fromInt(currentTemperature),
+        "characterization" -> Json.fromString(temperatureCharacterization),
+        "icon" -> Json.fromString(todayForecast._5)
+      ),
+      location
     )
-  }.handleErrorWith { error =>
-    logger.error(s"Failed to fetch weather data: ${error.getMessage}")
-    IO.pure(Json.obj(
-      "shortForecast" -> Json.fromString("Unknown"),
-      "temperature" -> Json.fromInt(0),
-      "dayTemperature" -> Json.fromInt(0),
-      "nightTemperature" -> Json.fromInt(0),
-      "currentTemperature" -> Json.fromInt(0),
-      "characterization" -> Json.fromString("unknown"),
-      "icon" -> Json.fromString("")
-    ))
   }
 
   private def fetchMetadata(lat: String, long: String): IO[String] = IO {

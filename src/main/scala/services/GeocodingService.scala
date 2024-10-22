@@ -10,13 +10,11 @@ import org.http4s.Uri
 import org.http4s.circe._
 import scala.concurrent.ExecutionContext.global
 
-
 object GeocodingService {
   private val apiKey = "53771be1069a4f5c9d775211de433846"
   
   def geocode(city: String, state: String): IO[(String, String)] = {
     val geocodingUrlTemplate = "https://api.opencagedata.com/geocode/v1/json?q=%s,%s&key=%s"
-    // example: https://api.opencagedata.com/geocode/v1/json?q=New%20York,NY&key=53771be1069a4f5c9d775211de433846
     BlazeClientBuilder[IO](global).resource.use { client =>
       val encodedCity = Uri.encode(city)
       val encodedState = Uri.encode(state)
@@ -27,6 +25,20 @@ object GeocodingService {
         val lat = cursor.downField("results").downArray.downField("geometry").get[Double]("lat").getOrElse(0.0).toString
         val lng = cursor.downField("results").downArray.downField("geometry").get[Double]("lng").getOrElse(0.0).toString
         (lat, lng)
+      }
+    }
+  }
+
+  def reverseGeocode(lat: String, lng: String): IO[(String, String)] = {
+    val reverseGeocodingUrlTemplate = "https://api.opencagedata.com/geocode/v1/json?q=%s+%s&key=%s"
+    BlazeClientBuilder[IO](global).resource.use { client =>
+      val uriString = reverseGeocodingUrlTemplate.format(lat, lng, apiKey)
+      val uri = Uri.unsafeFromString(uriString)
+      client.expect[Json](GET(uri)).map { json =>
+        val cursor: HCursor = json.hcursor
+        val city = cursor.downField("results").downArray.downField("components").get[String]("city").getOrElse("Unknown City")
+        val state = cursor.downField("results").downArray.downField("components").get[String]("state").getOrElse("Unknown State")
+        (city, state)
       }
     }
   }
