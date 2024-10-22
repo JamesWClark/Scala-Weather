@@ -11,7 +11,7 @@ object Main extends IOApp.Simple {
       val httpApp = Routes.allRoutes(client).orNotFound
 
       BlazeServerBuilder[IO]
-        .bindHttp(8080, "localhost")
+        .bindHttp(8080, "0.0.0.0") 
         .withHttpApp(httpApp)
         .serve
         .compile
