@@ -73,27 +73,33 @@ object AltIndexView {
               )
             ),
             div(id := "tab-content3", cls := "tab-content")(
-              h2("Map Search"),
-              div(id := "map", style := "width: 100%; height: 400px;"),
-              form(action := "/weather", method := "get", id := "mapForm", autocomplete := "off")(
-                div(cls := "mb-3")(
-                  label(`for` := "city", cls := "form-label")("City:"),
-                  input(`type` := "text", cls := "form-control", id := "city", name := "city", autocomplete := "off")
+              div(cls := "row")(
+                div(cls := "form-container col-md-4")(
+                  h2("Map Search"),
+                  form(id := "mapForm", autocomplete := "off")(
+                    div(cls := "mb-3")(
+                      label(`for` := "city", cls := "form-label")("City:"),
+                      input(`type` := "text", cls := "form-control", id := "map-city", name := "city", autocomplete := "off", disabled := "disabled")
+                    ),
+                    div(cls := "mb-3")(
+                      label(`for` := "state", cls := "form-label")("State:"),
+                      input(`type` := "text", cls := "form-control", id := "map-state", name := "state", autocomplete := "off", disabled := "disabled")
+                    ),
+                    div(cls := "mb-3")(
+                      label(`for` := "lat", cls := "form-label")("Latitude:"),
+                      input(`type` := "text", cls := "form-control", id := "map-latitude", name := "latitude", autocomplete := "off", disabled := "disabled")
+                    ),
+                    div(cls := "mb-3")(
+                      label(`for` := "long", cls := "form-label")("Longitude:"),
+                      input(`type` := "text", cls := "form-control", id := "map-longitude", name := "longitude", autocomplete := "off", disabled := "disabled")
+                    ),
+                    div(cls := "mb-3")(
+                      input(`type` := "submit", cls := "btn btn-primary", value := "Submit")
+                    )
+                  )
                 ),
-                div(cls := "mb-3")(
-                  label(`for` := "state", cls := "form-label")("State:"),
-                  input(`type` := "text", cls := "form-control", id := "state", name := "state", autocomplete := "off")
-                ),
-                div(cls := "mb-3")(
-                  label(`for` := "lat", cls := "form-label")("Latitude:"),
-                  input(`type` := "text", cls := "form-control", id := "lat", name := "latitude", autocomplete := "off")
-                ),
-                div(cls := "mb-3")(
-                  label(`for` := "long", cls := "form-label")("Longitude:"),
-                  input(`type` := "text", cls := "form-control", id := "long", name := "longitude", autocomplete := "off")
-                ),
-                div(cls := "mb-3")(
-                  input(`type` := "submit", cls := "btn btn-primary", value := "Submit")
+                div(cls := "map-container col-md-8")(
+                  div(id := "map", style := "width: 100%; height: 400px;")
                 )
               )
             )

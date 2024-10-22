@@ -15,7 +15,8 @@ import services.{GeocodingService, WeatherService}
 import views.AltIndexView
 import org.slf4j.LoggerFactory
 import io.circe.Json
-import io.circe.parser._
+import org.http4s.circe._
+import io.circe.syntax._
 
 object AltRoutes {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -46,6 +47,13 @@ object AltRoutes {
       WeatherService.fetchWeather(latitude, longitude).flatMap { case (weatherJson, location) =>
         Ok(AltIndexView.render(Some(weatherJson), Some(location), Some(latitude), Some(longitude)))
           .map(_.withContentType(`Content-Type`(MediaType.text.html).withCharset(org.http4s.Charset.`UTF-8`)))
+      }
+
+    case GET -> Root / "reverse-geocode" :? LatQueryParamDecoderMatcher(latitude) +& LongQueryParamDecoderMatcher(longitude) =>
+      logger.info(s"Received request for reverse geocoding with latitude: $latitude and longitude: $longitude")
+      GeocodingService.reverseGeocode(latitude, longitude).flatMap { case (city, state) =>
+        Ok(Json.obj("city" -> Json.fromString(city), "state" -> Json.fromString(state)))
+          .map(_.withContentType(`Content-Type`(MediaType.application.json)))
       }
 
     case GET -> Root / "autocomplete" :? QueryParamDecoderMatcher(query) =>

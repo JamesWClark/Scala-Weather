@@ -57,10 +57,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Listen for the animation end event
         map.once('moveend', function () {
           // Update the input fields with the city, state, latitude, and longitude
-          var cityInput = document.getElementById('map-city');
-          var stateInput = document.getElementById('map-state');
-          var latInput = document.getElementById('map-latitude');
-          var longInput = document.getElementById('map-longitude');
+          var cityInput = document.getElementById('city');
+          var stateInput = document.getElementById('state');
+          var latInput = document.getElementById('lat');
+          var longInput = document.getElementById('long');
           console.log("Updating input fields with:", city, state, "Lat:", position.coords.latitude, "Lng:", position.coords.longitude); // Log the update
           cityInput.value = city;
           stateInput.value = state;
@@ -79,37 +79,32 @@ document.addEventListener('DOMContentLoaded', function () {
     var coordinate = ol.proj.toLonLat(evt.coordinate);
     var lon = coordinate[0];
     var lat = coordinate[1];
-    document.getElementById('map-latitude').value = lat.toFixed(6);
-    document.getElementById('map-longitude').value = lon.toFixed(6);
-
-    // Fetch city and state using the reverse geocoding endpoint
-    fetch(`/reverse-geocode?latitude=${lat}&longitude=${lon}`)
-      .then(response => response.json())
-      .then(data => {
-        console.log('Reverse geocoding result:', 'city: ', data.city, 'state: ', data.state, 'Lat:', lat, 'Lng:', lon); // Log the result
-        document.getElementById('map-city').value = data.city;
-        document.getElementById('map-state').value = data.state;
-        document.getElementById('map-latitude').value = lat.toFixed(6);
-        document.getElementById('map-longitude').value = lon.toFixed(6);
-      })
-      .catch(error => console.error('Error fetching reverse geocode results:', error));
+    document.getElementById('lat').value = lat.toFixed(6);
+    document.getElementById('long').value = lon.toFixed(6);
+    reverseGeocode(lat, lon, function (city, state) {
+      console.log('Reverse geocoding result:', 'city: ', city, 'state: ', state, 'Lat:', lat, 'Lng:', lon); // Log the result
+      var cityInput = document.getElementById('city');
+      var stateInput = document.getElementById('state');
+      cityInput.value = city;
+      stateInput.value = state;
+    });
   });
 
   function reverseGeocode(lat, lng, callback) {
-    fetch(`/reverse-geocode?latitude=${lat}&longitude=${lng}`)
+    var apiKey = '53771be1069a4f5c9d775211de433846';
+    fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${apiKey}`)
       .then(response => response.json())
       .then(data => {
-        callback(data.city, data.state);
+        if (data.results.length > 0) {
+          var components = data.results[0].components;
+          var city = components.city || components.town || components.village;
+          var state = components.state;
+          console.log("Fetched city and state:", city, state, "Lat:", lat, "Lng:", lng); // Log the fetched data
+          callback(city, state);
+        }
       })
       .catch(error => console.error('Error fetching reverse geocode results:', error));
   }
-
-  document.getElementById('mapForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    var lat = document.getElementById('map-latitude').value;
-    var long = document.getElementById('map-longitude').value;
-    window.location.href = `/weather?latitude=${lat}&longitude=${long}`;
-  });
 
   // Expose the map object to the global scope for use in autocomplete.js
   window.map = map;
