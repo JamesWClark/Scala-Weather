@@ -6,7 +6,7 @@ import io.circe.syntax._
 import io.circe.{Json, HCursor, Encoder, JsonObject}
 import scala.io.Source
 import java.net.URL
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, ZonedDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 import org.slf4j.LoggerFactory
 import services.GeocodingService
@@ -42,7 +42,7 @@ object WeatherService {
         logger.error(s"Failed to fetch current observation: ${error.getMessage}")
         IO.raiseError(new Exception("Failed to fetch current observation"))
       }
-      currentTemperature = extractCurrentTemperature(currentObservation)
+      currentTemperature <- extractCurrentTemperatureOrFallback(currentObservation, forecastUrl)
       temperatureCharacterization = characterizeTemperature(currentTemperature)
       locationTuple <- GeocodingService.reverseGeocode(lat, long).handleErrorWith { error =>
         logger.error(s"Failed to reverse geocode: ${error.getMessage}")
@@ -66,6 +66,7 @@ object WeatherService {
   private def fetchMetadata(lat: String, long: String): IO[String] = IO {
     val url = urlTemplate.format(lat, long)
     val metadata = Source.fromURL(new URL(url)).mkString
+    logger.debug(s"Metadata URL: $url")
     logger.info(s"Fetched metadata: $metadata")
     metadata
   }
@@ -74,7 +75,7 @@ object WeatherService {
     val json: Json = parse(metadata).getOrElse(Json.Null)
     val cursor: HCursor = json.hcursor
     val forecastUrl = cursor.downField("properties").get[String]("forecast").getOrElse("")
-    logger.info(s"Extracted forecast URL: $forecastUrl")
+    logger.debug(s"Extracted forecast URL: $forecastUrl")
     forecastUrl
   }
 
@@ -88,7 +89,6 @@ object WeatherService {
     val json: Json = parse(forecast).getOrElse(Json.Null)
     val cursor: HCursor = json.hcursor
     val periods = cursor.downField("properties").downField("periods").as[List[Json]].getOrElse(List.empty)
-    logger.info(s"Periods: $periods")
     val today = LocalDate.now()
     val todayPeriod = periods.find { period =>
       val startTime = period.hcursor.downField("startTime").as[String].getOrElse("")
@@ -113,7 +113,7 @@ object WeatherService {
     val json: Json = parse(metadata).getOrElse(Json.Null)
     val cursor: HCursor = json.hcursor
     val observationStationsUrl = cursor.downField("properties").get[String]("observationStations").getOrElse("")
-    logger.info(s"Extracted observation stations URL: $observationStationsUrl")
+    logger.debug(s"Extracted observation stations URL: $observationStationsUrl")
 
     if (observationStationsUrl.isEmpty) {
       IO.raiseError(new Exception("Observation stations URL is empty"))
@@ -138,6 +138,7 @@ object WeatherService {
       IO {
         val url = s"https://api.weather.gov/stations/$stationId/observations/latest"
         val observation = Source.fromURL(new URL(url)).mkString
+        logger.debug(s"Current observation URL: $url")
         logger.info(s"Fetched current observation: $observation")
         observation
       }
@@ -147,20 +148,59 @@ object WeatherService {
     IO.pure("")
   }
 
-  private def extractCurrentTemperature(observation: String): Int = {
+  private def extractCurrentTemperature(observation: String): Option[Int] = {
     if (observation.isEmpty) {
       logger.warn("Observation data is empty")
-      0
+      None
     } else {
       val json: Json = parse(observation).getOrElse(Json.Null)
       val cursor: HCursor = json.hcursor
-      val temperatureCelsius = cursor.downField("properties").downField("temperature").downField("value").as[Double].getOrElse {
+      val temperatureCelsius = cursor.downField("properties").downField("temperature").downField("value").as[Option[Double]].getOrElse {
         logger.warn("Failed to extract temperature from observation data")
-        0.0
+        None
       }
-      val temperatureFahrenheit = (temperatureCelsius * 9 / 5) + 32
-      logger.info(s"Extracted current temperature: $temperatureCelsius°C / $temperatureFahrenheit°F")
-      temperatureFahrenheit.toInt
+      temperatureCelsius.map { temp =>
+        val temperatureFahrenheit = (temp * 9 / 5) + 32
+        logger.info(s"Extracted current temperature: $temp°C / $temperatureFahrenheit°F")
+        temperatureFahrenheit.toInt
+      }
+    }
+  }
+
+  private def extractCurrentTemperatureOrFallback(observation: String, forecastUrl: String): IO[Int] = {
+    extractCurrentTemperature(observation) match {
+      case Some(temp) => IO.pure(temp)
+      case None =>
+        logger.warn("Current temperature is null, falling back to hourly forecast")
+        fetchHourlyForecast(forecastUrl)
+    }
+  }
+
+  private def fetchHourlyForecast(forecastUrl: String): IO[Int] = {
+    val hourlyForecastUrl = forecastUrl.replace("forecast", "forecast/hourly")
+    IO {
+      val url = new URL(hourlyForecastUrl)
+      val forecast = Source.fromURL(url).mkString
+      logger.debug(s"Hourly forecast URL: $hourlyForecastUrl")
+      logger.info(s"Fetched hourly forecast: $forecast")
+  
+      val json: Json = parse(forecast).getOrElse(Json.Null)
+      val cursor: HCursor = json.hcursor
+      val periods = cursor.downField("properties").downField("periods").as[List[Json]].getOrElse(List.empty)
+      val now = ZonedDateTime.now(ZoneOffset.UTC)
+  
+      val nextPeriod = periods.find { period =>
+        val startTime = ZonedDateTime.parse(period.hcursor.downField("startTime").as[String].getOrElse(""))
+        val endTime = ZonedDateTime.parse(period.hcursor.downField("endTime").as[String].getOrElse(""))
+        now.isAfter(startTime) && now.isBefore(endTime)
+      }.getOrElse(Json.Null)
+  
+      val temperature = nextPeriod.hcursor.downField("temperature").as[Int].getOrElse(0)
+      logger.info(s"Fetched hourly forecast temperature: $temperature°F")
+      temperature
+    }.handleErrorWith { error =>
+      logger.error(s"Failed to fetch hourly forecast: ${error.getMessage}")
+      IO.pure(0)
     }
   }
 

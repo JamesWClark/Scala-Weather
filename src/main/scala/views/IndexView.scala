@@ -6,7 +6,9 @@ import io.circe.Json
 import io.circe.parser._
 
 object IndexView {
-  def render(weatherJson: Option[Json] = None, location: Option[String] = None, latitude: Option[String] = None, longitude: Option[String] = None): String = {
+  private val version = "1.0.0" // Update this version as needed
+
+  def render(weatherJson: Option[Json] = None, location: Option[String] = None, latitude: Option[String] = None, longitude: Option[String] = None, errorMessage: Option[String] = None): String = {
     val weatherInfo = weatherJson.flatMap { json =>
       for {
         shortForecast <- json.hcursor.downField("shortForecast").as[String].toOption
@@ -30,9 +32,9 @@ object IndexView {
       head(
         meta(charset := "UTF-8"),
         title("Weather"),
-        link(rel := "stylesheet", href := "/static/css/bootstrap.min.css"),
-        link(rel := "stylesheet", href := "/static/css/openlayers.css"),
-        link(rel := "stylesheet", href := "/static/css/main.css")
+        link(rel := "stylesheet", href := s"/static/css/bootstrap.min.css"),
+        link(rel := "stylesheet", href := s"/static/css/openlayers.css"),
+        link(rel := "stylesheet", href := s"/static/css/main.css")
       ),
       body(
         div(cls := "container")(
@@ -76,6 +78,7 @@ object IndexView {
               div(cls := "row")(
                 div(cls := "form-container col-md-4")(
                   h2("Map Search"),
+                  button(cls := "btn btn-primary mb-3", onclick := "requestLocation()")("Use My Location"),
                   form(id := "mapForm", autocomplete := "off")(
                     div(cls := "mb-3")(
                       label(`for` := "city", cls := "form-label")("City:"),
@@ -107,13 +110,15 @@ object IndexView {
           div(cls := "row mt-4")(
             div(cls := "col-md-12")(
               div(id := "weatherInfo")(
-                if (location.isDefined || (latitude.isDefined && longitude.isDefined)) {
+                if (errorMessage.isDefined) {
+                  div(cls := "alert alert-danger")(errorMessage.get)
+                } else if (location.isDefined || (latitude.isDefined && longitude.isDefined)) {
                   weatherInfo.map { case (shortForecast, temperature, dayTemperature, nightTemperature, currentTemperature, characterization, icon) =>
                     div(cls := "card")(
+                      div(cls := "card-header bg-dark text-white")(locationDisplay),
                       div(cls := "card-body")(
-                        h5(cls := "card-title")(locationDisplay),
-                        div(cls := "d-flex align-items-center")(
-                          if (icon.nonEmpty) img(src := icon, cls := "weather-icon mr-3") else "",
+                        div(cls := "d-flex align-items-start weather-report-container")(
+                          if (icon.nonEmpty) img(src := icon, cls := "weather-icon") else "",
                           div(cls := "flex-grow-1")(
                             p(cls := "display-4")(s"$currentTemperature°F (Current)"),
                             p(cls := "lead")(shortForecast),
@@ -133,10 +138,11 @@ object IndexView {
             )
           )
         ),
-        script(src := "/static/js/bootstrap.min.js"),
-        script(src := "/static/js/alt-autocomplete.js"),
-        script(src := "/static/js/openlayers.min.js"),
-        script(src := "/static/js/map.js")
+        script(src := s"/static/js/bootstrap.min.js"),
+        script(src := s"/static/js/alt-autocomplete.js"),
+        script(src := s"/static/js/openlayers.min.js"),
+        script(src := s"/static/js/map.js"),
+        script(src := s"/static/js/weather.js")
       )
     ).render
   }

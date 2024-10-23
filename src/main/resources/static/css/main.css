@@ -16,7 +16,7 @@
     background: #ccc;
 }
 
-.tab:checked + .tab-label {
+.tab:checked+.tab-label {
     background: #fff;
     border-bottom: 1px solid #fff;
 }
@@ -29,8 +29,19 @@
     background: #fff;
 }
 
-#tab1:checked ~ #tab-content1,
-#tab2:checked ~ #tab-content2,
-#tab3:checked ~ #tab-content3 {
+#tab1:checked~#tab-content1,
+#tab2:checked~#tab-content2,
+#tab3:checked~#tab-content3 {
     display: block;
+}
+
+.weather-icon {
+    padding-right: 20px;
+}
+
+.card-title {
+    background-color: #343a40;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
 }

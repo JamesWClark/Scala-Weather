@@ -54,18 +54,21 @@ object WeatherRoutes {
 
   def viewRoutes: HttpRoutes[IO] = HttpRoutes.of[IO] {
     case GET -> Root / "latlong" :? LatQueryParamDecoderMatcher(lat) +& LongQueryParamDecoderMatcher(long) =>
+      logger.info(s"Received request for weather with lat: $lat, long: $long")
       WeatherService.fetchWeather(lat, long).attempt.flatMap {
         case Right((json, location)) =>
           Ok(IndexView.render(Some(json), Some(location), Some(lat), Some(long)))
             .map(_.withContentType(`Content-Type`(MediaType.text.html)))
         case Left(ex) =>
-          InternalServerError(s"An error occurred: ${ex.getMessage}")
+          Ok(IndexView.render(errorMessage = Some(s"An error occurred: ${ex.getMessage}")))
+            .map(_.withContentType(`Content-Type`(MediaType.text.html)))
       }
 
     case GET -> Root / "city" :? CityQueryParamDecoderMatcher(city) =>
       logger.info(s"Received request for weather with city: $city")
       (for {
         coords <- GeocodingService.geocode(city, "")
+        _ = logger.info(s"Geocoded city: $city to coords: ${coords._1}, ${coords._2}")
         weatherResult <- WeatherService.fetchWeather(coords._1, coords._2)
         response <- weatherResult match {
           case (weatherJson, location) =>
@@ -74,7 +77,8 @@ object WeatherRoutes {
         }
       } yield response).handleErrorWith { error =>
         logger.error(s"Error fetching weather data: ${error.getMessage}")
-        InternalServerError(s"An error occurred: ${error.getMessage}")
+        Ok(IndexView.render(errorMessage = Some(s"An error occurred: ${error.getMessage}")))
+          .map(_.withContentType(`Content-Type`(MediaType.text.html)))
       }
   }
 

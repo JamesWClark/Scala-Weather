@@ -5,6 +5,10 @@
     </encoder>
   </appender>
 
+  <logger name="org.http4s.blaze" level="OFF" additivity="false">
+    <appender-ref ref="STDOUT" />
+  </logger>
+
   <root level="DEBUG">
     <appender-ref ref="STDOUT" />
   </root>
