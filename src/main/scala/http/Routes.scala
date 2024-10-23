@@ -37,9 +37,10 @@ object Routes {
 
   // Combine routes with middleware
   def allRoutes(client: Client[IO]): HttpRoutes[IO] = Router(
-    "/" -> routes(client),
+    "/" -> noCacheMiddleware(routes(client)),
     "/static" -> noCacheMiddleware(staticRoutes),
-    "/geocoding" -> GeocodingRoutes.routes(client),
-    "/weather" -> WeatherRoutes.routes
+    "/geocoding" -> noCacheMiddleware(GeocodingRoutes.routes(client)),
+    "/json/weather" -> noCacheMiddleware(WeatherRoutes.jsonRoutes),
+    "/view/weather" -> noCacheMiddleware(WeatherRoutes.viewRoutes)
   )
 }

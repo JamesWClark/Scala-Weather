@@ -2,13 +2,15 @@ package http
 
 import cats.effect._
 import org.http4s._
-import org.http4s.circe._
 import org.http4s.dsl.io._
+import org.http4s.circe._
 import io.circe.Json
 import io.circe.syntax._
 import io.circe.generic.auto._
 import services.{GeocodingService, WeatherService}
+import views.IndexView
 import org.slf4j.LoggerFactory
+import org.http4s.headers.`Content-Type`
 
 object WeatherRoutes {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -25,13 +27,12 @@ object WeatherRoutes {
 
   implicit val weatherResponseEncoder: EntityEncoder[IO, WeatherResponse] = jsonEncoderOf[IO, WeatherResponse]
 
-  def routes: HttpRoutes[IO] = HttpRoutes.of[IO] {
+  def jsonRoutes: HttpRoutes[IO] = HttpRoutes.of[IO] {
     case GET -> Root / "latlong" / latLong =>
       val Array(lat, long) = latLong.split(",")
       WeatherService.fetchWeather(lat, long).attempt.flatMap {
-        case Right((json, location)) =>
-          val weatherResponse = parseWeatherResponse(json)
-          Ok(weatherResponse.asJson)
+        case Right((json, _)) =>
+          Ok(json)
         case Left(ex) =>
           InternalServerError(s"An error occurred: ${ex.getMessage}")
       }
@@ -42,9 +43,8 @@ object WeatherRoutes {
         coords <- GeocodingService.geocode(city, "")
         weatherResult <- WeatherService.fetchWeather(coords._1, coords._2)
         response <- weatherResult match {
-          case (weatherJson, location) =>
-            val weatherResponse = parseWeatherResponse(weatherJson)
-            Ok(weatherResponse.asJson)
+          case (weatherJson, _) =>
+            Ok(weatherJson)
         }
       } yield response).handleErrorWith { error =>
         logger.error(s"Error fetching weather data: ${error.getMessage}")
@@ -52,16 +52,33 @@ object WeatherRoutes {
       }
   }
 
-  private def parseWeatherResponse(json: Json): WeatherResponse = {
-    val cursor = json.hcursor
-    WeatherResponse(
-      shortForecast = cursor.downField("shortForecast").as[String].getOrElse("Unknown"),
-      temperature = cursor.downField("temperature").as[Int].getOrElse(0),
-      dayTemperature = cursor.downField("dayTemperature").as[Int].getOrElse(0),
-      nightTemperature = cursor.downField("nightTemperature").as[Int].getOrElse(0),
-      currentTemperature = cursor.downField("currentTemperature").as[Int].getOrElse(0),
-      characterization = cursor.downField("characterization").as[String].getOrElse("Unknown"),
-      icon = cursor.downField("icon").as[String].getOrElse("")
-    )
+  def viewRoutes: HttpRoutes[IO] = HttpRoutes.of[IO] {
+    case GET -> Root / "latlong" :? LatQueryParamDecoderMatcher(lat) +& LongQueryParamDecoderMatcher(long) =>
+      WeatherService.fetchWeather(lat, long).attempt.flatMap {
+        case Right((json, location)) =>
+          Ok(IndexView.render(Some(json), Some(location), Some(lat), Some(long)))
+            .map(_.withContentType(`Content-Type`(MediaType.text.html)))
+        case Left(ex) =>
+          InternalServerError(s"An error occurred: ${ex.getMessage}")
+      }
+
+    case GET -> Root / "city" :? CityQueryParamDecoderMatcher(city) =>
+      logger.info(s"Received request for weather with city: $city")
+      (for {
+        coords <- GeocodingService.geocode(city, "")
+        weatherResult <- WeatherService.fetchWeather(coords._1, coords._2)
+        response <- weatherResult match {
+          case (weatherJson, location) =>
+            Ok(IndexView.render(Some(weatherJson), Some(location)))
+              .map(_.withContentType(`Content-Type`(MediaType.text.html)))
+        }
+      } yield response).handleErrorWith { error =>
+        logger.error(s"Error fetching weather data: ${error.getMessage}")
+        InternalServerError(s"An error occurred: ${error.getMessage}")
+      }
   }
+
+  object LatQueryParamDecoderMatcher extends QueryParamDecoderMatcher[String]("latitude")
+  object LongQueryParamDecoderMatcher extends QueryParamDecoderMatcher[String]("longitude")
+  object CityQueryParamDecoderMatcher extends QueryParamDecoderMatcher[String]("city")
 }
