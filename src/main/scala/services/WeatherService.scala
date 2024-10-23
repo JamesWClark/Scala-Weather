@@ -14,6 +14,7 @@ import services.GeocodingService
 object WeatherService {
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val urlTemplate = "https://api.weather.gov/points/%s,%s"
+  // ex: https://api.weather.gov/points/38.885924,-104.848246
 
   def fetchWeather(lat: String, long: String): IO[(Json, String)] = {
     for {

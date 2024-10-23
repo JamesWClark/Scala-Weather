@@ -46,7 +46,7 @@ object IndexView {
             label(`for` := "tab3", cls := "tab-label")("Map"),
             div(id := "tab-content1", cls := "tab-content")(
               h2("City Search"),
-              form(action := "/weather", method := "get", id := "weatherForm", autocomplete := "off")(
+              form(action := "/weather/city", method := "get", id := "weatherForm", autocomplete := "off", onsubmit := "fetchWeatherByCity(event)")(
                 div(cls := "mb-3")(
                   label(`for` := "city", cls := "form-label")("City:"),
                   input(`type` := "text", cls := "form-control", id := "city", name := "city", autocomplete := "off", value := location.getOrElse(""))
@@ -58,7 +58,7 @@ object IndexView {
             ),
             div(id := "tab-content2", cls := "tab-content")(
               h2("Lat / Long Search"),
-              form(action := "/weather", method := "get", id := "latLongForm", autocomplete := "off")(
+              form(action := "/weather/latlong", method := "get", id := "latLongForm", autocomplete := "off", onsubmit := "fetchWeatherByLatLong(event)")(
                 div(cls := "mb-3")(
                   label(`for` := "latitude", cls := "form-label")("Latitude:"),
                   input(`type` := "text", cls := "form-control", id := "latitude", name := "latitude", autocomplete := "off", value := latitude.getOrElse(""))
@@ -76,7 +76,7 @@ object IndexView {
               div(cls := "row")(
                 div(cls := "form-container col-md-4")(
                   h2("Map Search"),
-                  form(id := "mapForm", autocomplete := "off")(
+                  form(id := "mapForm", autocomplete := "off", onsubmit := "fetchWeatherByMap(event)")(
                     div(cls := "mb-3")(
                       label(`for` := "city", cls := "form-label")("City:"),
                       input(`type` := "text", cls := "form-control", id := "map-city", name := "city", autocomplete := "off", disabled := "disabled")
@@ -136,7 +136,8 @@ object IndexView {
         script(src := "/static/js/bootstrap.min.js"),
         script(src := "/static/js/alt-autocomplete.js"),
         script(src := "/static/js/openlayers.min.js"),
-        script(src := "/static/js/map.js")
+        script(src := "/static/js/map.js"),
+        script(src := "/static/js/weather.js")
       )
     ).render
   }

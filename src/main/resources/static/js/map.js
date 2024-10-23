@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('map-longitude').value = lon.toFixed(6);
 
     // Fetch city and state using the reverse geocoding endpoint
-    fetch(`/reverse-geocode?latitude=${lat}&longitude=${lon}`)
+    fetch(`/geocoding/reverse-geocode?latitude=${lat}&longitude=${lon}`)
       .then(response => response.json())
       .then(data => {
         console.log('Reverse geocoding result:', 'city: ', data.city, 'state: ', data.state, 'Lat:', lat, 'Lng:', lon); // Log the result
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   function reverseGeocode(lat, lng, callback) {
-    fetch(`/reverse-geocode?latitude=${lat}&longitude=${lng}`)
+    fetch(`/geocoding/reverse-geocode?latitude=${lat}&longitude=${lng}`)
       .then(response => response.json())
       .then(data => {
         callback(data.city, data.state);
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
     event.preventDefault();
     var lat = document.getElementById('map-latitude').value;
     var long = document.getElementById('map-longitude').value;
-    window.location.href = `/weather?latitude=${lat}&longitude=${long}`;
+    window.location.href = `/weather/latlong/${lat},${long}`;
   });
 
   // Expose the map object to the global scope for use in autocomplete.js
